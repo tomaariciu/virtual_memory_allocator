@@ -7,5 +7,8 @@ build:
 run_sfl:
 	./sfl
 
+run_debug:
+	./sfl < test.in > test.out
+
 clean:
 	rm sfl

@@ -1,5 +1,8 @@
+.vscode
 check
 check_utils/
 cs/
-install.sh
+*.sh
 tasks/
+test.in
+test.out

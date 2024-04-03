@@ -1,7 +1,7 @@
-**Nume:**
-**Grupă:**
+**Nume: Ariciu Toma**
+**Grupă: 312CAb**
 
-## Titlu + numar temă
+## Tema 1 - Segregated Free Lists
 
 ### Descriere:
 
