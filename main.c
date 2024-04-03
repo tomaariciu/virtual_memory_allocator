@@ -9,12 +9,12 @@ int main(void)
 	int end_program = 0;
 	general_info_t info;
 	initialise_info(&info);
-	dll_array_t segregated_free_lists;
-	doubly_linked_list_t *allocated_blocks = create_dll();
+	dll_array_t sfl;
+	doubly_linked_list_t *alloc_list = create_dll();
 	do {
 		scanf("%s", command);
 		//printf("Comanda este %s\n", command);
-		end_program = parse_command(command, &info, &segregated_free_lists, allocated_blocks);
+		end_program = parse_command(command, &info, &sfl, alloc_list);
 	} while (!end_program);
 	return 0;
 }

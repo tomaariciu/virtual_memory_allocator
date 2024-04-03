@@ -1,6 +1,7 @@
 #include "utils.h"
 
-void initialise_info(general_info_t *info) {
+void initialise_info(general_info_t *info)
+{
 	info->total_memory = 0;
 	info->allocated_memory = 0;
 	info->free_memory = 0;

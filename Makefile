@@ -1,5 +1,5 @@
 CC=gcc
-CFLAGS=-std=c99 -Wall -Wextra
+CFLAGS=-std=c99 -Wall -Wextra -g
 
 build:
 	$(CC) $(CFLAGS) *.c -o sfl

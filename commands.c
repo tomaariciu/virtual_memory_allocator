@@ -1,44 +1,39 @@
 #include "commands.h"
 
-int parse_command(char command[MAX_STRING_LENGTH], general_info_t *info, dll_array_t *segregated_free_lists, doubly_linked_list_t *allocated_blocks)
+int parse_command(char command[MAX_STRING_LENGTH], general_info_t *info,
+				  dll_array_t *sfl, doubly_linked_list_t *alloc_list)
 {
-	(void) segregated_free_lists;
-	(void) allocated_blocks;
 	if (!strcmp(command, "INIT_HEAP")) {
 		int start_address, no_lists, list_size;
-		scanf("%x %d %d %d\n", &start_address, &no_lists, &list_size, &info->reconstruction);
-		//printf("Comanda este INIT_HEAP, avand parametrii: %d %d %d %d\n", start_address, no_lists, list_size, info->reconstruction);
-		initialise_heap(info, segregated_free_lists, start_address, no_lists, list_size);
+		scanf("%x %d %d %d\n", &start_address, &no_lists, &list_size,
+			  &info->reconstruction);
+		initialise_heap(info, sfl, start_address, no_lists, list_size);
 	}
 
 	if (!strcmp(command, "MALLOC")) {
 		int no_bytes;
 		scanf("%d\n", &no_bytes);
-		//printf("Comanda este MALLOC, avand parametrul %d\n", no_bytes);
-		malloc_command(info, segregated_free_lists, allocated_blocks, no_bytes);
+		malloc_command(info, sfl, alloc_list, no_bytes);
 	}
 
 	if (!strcmp(command, "FREE")) {
 		int address;
 		scanf("%x\n", &address);
-		//printf("Comanda este FREE, avand parametrul %d\n", address);
-		if (!address) {
+		if (!address)
 			return 0;
-		}
-		free_command(info, segregated_free_lists, allocated_blocks, address);
+		free_command(info, sfl, alloc_list, address);
 	}
 
 	if (!strcmp(command, "READ")) {
 		int address, no_bytes;
 		scanf("%x %d\n", &address, &no_bytes);
-		int seg_fault = read_command(allocated_blocks, address, no_bytes);
+		int seg_fault = read_command(alloc_list, address, no_bytes);
 		if (seg_fault) {
 			printf("Segmentation fault (core dumped)\n");
-			dump_memory(info, segregated_free_lists, allocated_blocks);
-			destroy_heap(segregated_free_lists, allocated_blocks);
+			dump_memory(info, sfl, alloc_list);
+			destroy_heap(sfl, alloc_list);
 			return 1;
 		}
-		//printf("Comanda este READ, avand parametrii: %d %d\n", address, no_bytes);
 	}
 
 	if (!strcmp(command, "WRITE")) {
@@ -48,11 +43,10 @@ int parse_command(char command[MAX_STRING_LENGTH], general_info_t *info, dll_arr
 		memset(aux, 0, MAX_STRING_LENGTH);
 		scanf("%x \"", &address);
 		fgets(data, MAX_STRING_LENGTH, stdin);
-		int last_quotes = 0, len = (int) strlen(data);
+		int last_quotes = 0, len = (int)strlen(data);
 		for (int i = 0; i < len; i++) {
-			if (data[i] == '"') {
+			if (data[i] == '"')
 				last_quotes = i;
-			}
 		}
 		data[last_quotes] = 0;
 		for (int i = last_quotes + 1; i < len; i++) {
@@ -60,57 +54,53 @@ int parse_command(char command[MAX_STRING_LENGTH], general_info_t *info, dll_arr
 			data[i] = 0;
 		}
 		sscanf(aux, "%d", &no_bytes);
-		//printf("Comanda este WRITE, avand parametrii: %x %s %d\n", address, data, no_bytes);
-		if ((int) strlen(data) < no_bytes) {
+		if ((int)strlen(data) < no_bytes)
 			no_bytes = strlen(data);
-		}
-		int seg_fault = write_command(allocated_blocks, address, data, no_bytes);
+		int seg_fault = write_command(alloc_list, address, data, no_bytes);
 		if (seg_fault) {
 			printf("Segmentation fault (core dumped)\n");
-			dump_memory(info, segregated_free_lists, allocated_blocks);
-			destroy_heap(segregated_free_lists, allocated_blocks);
+			dump_memory(info, sfl, alloc_list);
+			destroy_heap(sfl, alloc_list);
 			return 1;
 		}
 	}
 
-	if (!strcmp(command, "DUMP_MEMORY")) {
-		//printf("Comanda chiar este DUMP_MEMORY\n");
-		dump_memory(info, segregated_free_lists, allocated_blocks);
-	}
+	if (!strcmp(command, "DUMP_MEMORY"))
+		dump_memory(info, sfl, alloc_list);
 
 	if (!strcmp(command, "DESTROY_HEAP")) {
-		destroy_heap(segregated_free_lists, allocated_blocks);
+		destroy_heap(sfl, alloc_list);
 		return 1;
 	}
 
 	return 0;
 }
 
-
-void initialise_heap(general_info_t *info, dll_array_t *segregated_free_lists, int start_address, int no_lists, int list_size)
+void initialise_heap(general_info_t *info, dll_array_t *sfl, int start_address,
+					 int no_lists, int list_size)
 {
 	info->total_memory = no_lists * list_size;
 	int max_size = (8 << (no_lists - 1));
-	segregated_free_lists->size = max_size;
-	segregated_free_lists->v = (doubly_linked_list_t **) malloc((max_size + 1) * sizeof(doubly_linked_list_t *));
-	DIE(!segregated_free_lists, "Memory allocation failed!\n");
-	for (int i = 1; i <= max_size; i++) {
-		segregated_free_lists->v[i] = create_dll();
-	}
+	sfl->size = max_size;
+	sfl->v = (doubly_linked_list_t **)
+			 malloc((max_size + 1) * sizeof(doubly_linked_list_t *));
+	DIE(!sfl, "Memory allocation failed!\n");
+
+	for (int i = 1; i <= max_size; i++)
+		sfl->v[i] = create_dll();
+
 	int id = 0, address = start_address;
 	for (int sz = 8; sz <= max_size; sz <<= 1) {
 		dll_node_t *last_node = NULL;
 		for (int i = 0; i < list_size / sz; i++) {
 			void *data = create_data(id, address, sz, 0);
 			dll_node_t *new_node = create_node(data);
-			if (!segregated_free_lists->v[sz]->head) {
-				segregated_free_lists->v[sz]->head = new_node;
-			}
-			if (last_node) {
+			if (!sfl->v[sz]->head)
+				sfl->v[sz]->head = new_node;
+			if (last_node)
 				last_node->nxt = new_node;
-			}
 			new_node->prv = last_node;
-			segregated_free_lists->v[sz]->size++;
+			sfl->v[sz]->size++;
 			id++;
 			address += sz;
 			info->free_memory += sz;
@@ -120,7 +110,8 @@ void initialise_heap(general_info_t *info, dll_array_t *segregated_free_lists, i
 	}
 }
 
-void dump_memory(general_info_t *info, dll_array_t *segregated_free_lists, doubly_linked_list_t *allocated_blocks)
+void dump_memory(general_info_t *info, dll_array_t *sfl,
+				 doubly_linked_list_t *alloc_list)
 {
 	printf("+++++DUMP+++++\n");
 	printf("Total memory: %d bytes\n", info->total_memory);
@@ -131,12 +122,12 @@ void dump_memory(general_info_t *info, dll_array_t *segregated_free_lists, doubl
 	printf("Number of malloc calls: %d\n", info->malloc_calls);
 	printf("Number of fragmentations: %d\n", info->fragmentations);
 	printf("Number of free calls: %d\n", info->free_calls);
-	for (int sz = 1; sz <= segregated_free_lists->size; sz++) {
-		if (segregated_free_lists->v[sz]->size == 0) {
+	for (int sz = 1; sz <= sfl->size; sz++) {
+		if (sfl->v[sz]->size == 0)
 			continue;
-		}
-		printf("Blocks with %d bytes - %d free block(s) :", sz, segregated_free_lists->v[sz]->size);
-		dll_node_t *node = segregated_free_lists->v[sz]->head;
+		printf("Blocks with %d bytes - %d free block(s) :", sz,
+			   sfl->v[sz]->size);
+		dll_node_t *node = sfl->v[sz]->head;
 		while (node) {
 			printf(" 0x%x", get_address(node->data));
 			node = node->nxt;
@@ -144,7 +135,7 @@ void dump_memory(general_info_t *info, dll_array_t *segregated_free_lists, doubl
 		printf("\n");
 	}
 	printf("Allocated blocks :");
-	dll_node_t *node = allocated_blocks->head;
+	dll_node_t *node = alloc_list->head;
 	while (node) {
 		printf(" (0x%x - %d)", get_address(node->data), get_size(node->data));
 		node = node->nxt;
@@ -153,15 +144,17 @@ void dump_memory(general_info_t *info, dll_array_t *segregated_free_lists, doubl
 	printf("-----DUMP-----\n");
 }
 
-void malloc_command(general_info_t *info, dll_array_t *segregated_free_lists, doubly_linked_list_t *allocated_blocks, int no_bytes)
+void malloc_command(general_info_t *info, dll_array_t *sfl,
+					doubly_linked_list_t *alloc_list, int no_bytes)
 {
-	if (no_bytes <= segregated_free_lists->size && segregated_free_lists->v[no_bytes]->size != 0) {
-		dll_node_t *old_node = segregated_free_lists->v[no_bytes]->head;
-		dll_pop_front(segregated_free_lists->v[no_bytes]);
+	if (no_bytes <= sfl->size && sfl->v[no_bytes]->size != 0) {
+		dll_node_t *old_node = sfl->v[no_bytes]->head;
+		dll_pop_front(sfl->v[no_bytes]);
 		char *v = (char *)malloc(no_bytes * sizeof(char));
-		void *data = create_data(get_id(old_node->data), get_address(old_node->data), no_bytes, v);
+		int id = get_id(old_node->data), addr = get_address(old_node->data);
+		void *data = create_data(id, addr, no_bytes, v);
 		dll_node_t *new_node = create_node(data);
-		dll_insert(allocated_blocks, new_node);
+		dll_insert(alloc_list, new_node);
 		delete_node(old_node);
 		info->allocated_memory += no_bytes;
 		info->free_memory -= no_bytes;
@@ -170,19 +163,19 @@ void malloc_command(general_info_t *info, dll_array_t *segregated_free_lists, do
 		info->malloc_calls++;
 		return;
 	}
-	for (int sz = no_bytes + 1; sz <= segregated_free_lists->size; sz++) {
-		if (segregated_free_lists->v[sz]->size == 0) {
+	for (int sz = no_bytes + 1; sz <= sfl->size; sz++) {
+		if (sfl->v[sz]->size == 0)
 			continue;
-		}
-		dll_node_t *front = segregated_free_lists->v[sz]->head;
-		dll_pop_front(segregated_free_lists->v[sz]);
+		dll_node_t *front = sfl->v[sz]->head;
+		dll_pop_front(sfl->v[sz]);
 		char *v = (char *)malloc(no_bytes * sizeof(char));
-		void *allocated_data = create_data(get_id(front->data), get_address(front->data), no_bytes, v);
+		int id = get_id(front->data), addr = get_address(front->data);
+		void *allocated_data = create_data(id, addr, no_bytes, v);
 		dll_node_t *allocated_node = create_node(allocated_data);
-		void *free_data = create_data(get_id(front->data), get_address(front->data) + no_bytes, sz - no_bytes, 0);
+		void *free_data = create_data(id, addr + no_bytes, sz - no_bytes, 0);
 		dll_node_t *free_node = create_node(free_data);
-		dll_insert(allocated_blocks, allocated_node);
-		dll_insert(segregated_free_lists->v[sz - no_bytes], free_node);
+		dll_insert(alloc_list, allocated_node);
+		dll_insert(sfl->v[sz - no_bytes], free_node);
 		delete_node(front);
 		info->allocated_memory += no_bytes;
 		info->free_memory -= no_bytes;
@@ -194,54 +187,57 @@ void malloc_command(general_info_t *info, dll_array_t *segregated_free_lists, do
 	printf("Out of memory\n");
 }
 
-void free_command(general_info_t *info, dll_array_t *segregated_free_lists, doubly_linked_list_t *allocated_blocks, int address)
+void free_command(general_info_t *info, dll_array_t *sfl,
+				  doubly_linked_list_t *alloc_list, int address)
 {
-	dll_node_t *node = dll_lower_bound(allocated_blocks, address);
-	if (node == NULL || get_address(node->data) != address) {
+	dll_node_t *node = dll_lower_bound(alloc_list, address);
+	if (!node || get_address(node->data) != address) {
 		printf("Invalid free\n");
 		return;
 	}
-	dll_erase(allocated_blocks, node);
+	dll_erase(alloc_list, node);
 	int size = get_size(node->data);
-	dll_insert(segregated_free_lists->v[size], node);
-	info->allocated_memory -= size;
-	info->free_memory += size;
-	info->allocated_blocks--;
-	info->free_blocks++;
+	if (info->reconstruction == 0) {
+		dll_insert(sfl->v[size], node);
+		info->allocated_memory -= size;
+		info->free_memory += size;
+		info->allocated_blocks--;
+		info->free_blocks++;
+	}
 	info->free_calls++;
 }
 
-int check_seg_fault(doubly_linked_list_t *allocated_blocks, int address, int no_bytes)
+int check_seg_fault(doubly_linked_list_t *alloc_list, int address, int no_bytes)
 {
-	dll_node_t *node = dll_lower_bound(allocated_blocks, address);
-	if (node == NULL || get_address(node->data) + get_size(node->data) <= address) {
+	dll_node_t *node = dll_lower_bound(alloc_list, address);
+	if (!node || get_end_addr(node->data) <= address)
 		return 1;
-	}
-	int true_size = get_address(node->data) + get_size(node->data) - address;
+	int true_size = get_end_addr(node->data) - address;
 	int left = no_bytes - true_size;
 	while (left > 0) {
-		if (node->nxt == NULL || get_address(node->data) + get_size(node->data) != get_address(node->nxt->data)) {
+		if (!node->nxt || get_end_addr(node->data) !=
+			get_address(node->nxt->data))
 			return 1;
-		}
 		node = node->nxt;
 		left -= get_size(node->data);
 	}
 	return 0;
 }
 
-int read_command(doubly_linked_list_t *allocated_blocks, int address, int no_bytes)
+int read_command(doubly_linked_list_t *alloc_list, int address, int no_bytes)
 {
-	if (check_seg_fault(allocated_blocks, address, no_bytes)) {
+	if (check_seg_fault(alloc_list, address, no_bytes))
 		return 1;
-	}
-	dll_node_t *node = dll_lower_bound(allocated_blocks, address);
-	int true_size = get_address(node->data) + get_size(node->data) - address;
+
+	dll_node_t *node = dll_lower_bound(alloc_list, address);
+	int true_size = get_end_addr(node->data) - address;
 	int left = no_bytes - true_size;
 	int pos = 0;
 	char *v = get_array(node->data);
 	char *str = malloc((no_bytes + 1) * sizeof(char));
 	memset(str, 0, (no_bytes + 1) * sizeof(char));
-	for (int i = address - get_address(node->data); i < get_size(node->data) && pos < no_bytes; i++) {
+	int start_addr = address - get_address(node->data);
+	for (int i = start_addr; i < get_size(node->data) && pos < no_bytes; i++) {
 		str[pos] = v[i];
 		pos++;
 	}
@@ -259,17 +255,19 @@ int read_command(doubly_linked_list_t *allocated_blocks, int address, int no_byt
 	return 0;
 }
 
-int write_command(doubly_linked_list_t *allocated_blocks, int address, char str[MAX_STRING_LENGTH], int no_bytes)
+int write_command(doubly_linked_list_t *alloc_list, int address,
+				  char str[MAX_STRING_LENGTH], int no_bytes)
 {
-	if (check_seg_fault(allocated_blocks, address, no_bytes)) {
+	if (check_seg_fault(alloc_list, address, no_bytes))
 		return 1;
-	}
-	dll_node_t *node = dll_lower_bound(allocated_blocks, address);
-	int true_size = get_address(node->data) + get_size(node->data) - address;
+
+	dll_node_t *node = dll_lower_bound(alloc_list, address);
+	int true_size = get_end_addr(node->data) - address;
 	int left = no_bytes - true_size;
 	int pos = 0;
 	char *v = get_array(node->data);
-	for (int i = address - get_address(node->data); i < get_size(node->data) && pos < no_bytes; i++) {
+	int start_addr = address - get_address(node->data);
+	for (int i = start_addr; i < get_size(node->data) && pos < no_bytes; i++) {
 		v[i] = str[pos];
 		pos++;
 	}
@@ -285,11 +283,10 @@ int write_command(doubly_linked_list_t *allocated_blocks, int address, char str[
 	return 0;
 }
 
-void destroy_heap(dll_array_t *segregated_free_lists, doubly_linked_list_t *allocated_blocks)
+void destroy_heap(dll_array_t *sfl, doubly_linked_list_t *alloc_list)
 {
-	for (int sz = 1; sz <= segregated_free_lists->size; sz++) {
-		delete_list(segregated_free_lists->v[sz]);
-	}
-	free(segregated_free_lists->v);
-	delete_list(allocated_blocks);
+	for (int sz = 1; sz <= sfl->size; sz++)
+		delete_list(sfl->v[sz]);
+	free(sfl->v);
+	delete_list(alloc_list);
 }

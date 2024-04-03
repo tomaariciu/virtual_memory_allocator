@@ -8,7 +8,7 @@ void *create_data(int id, int address, int size, char *v)
 	data->address = address;
 	data->size = size;
 	data->v = v;
-	return (void *) data;
+	return (void *)data;
 }
 
 int get_id(void *data)
@@ -31,6 +31,11 @@ char *get_array(void *data)
 	return ((memory_data_t *)data)->v;
 }
 
+int get_end_addr(void *data)
+{
+	return get_address(data) + get_size(data);
+}
+
 dll_node_t *create_node(void *data)
 {
 	dll_node_t *new_node = malloc(sizeof(dll_node_t));
@@ -44,14 +49,13 @@ dll_node_t *create_node(void *data)
 void delete_node(dll_node_t *node)
 {
 	char *v = get_array(node->data);
-	if (v) {
+	if (v)
 		free(v);
-	}
 	free(node->data);
 	free(node);
 }
 
-doubly_linked_list_t *create_dll()
+doubly_linked_list_t *create_dll(void)
 {
 	doubly_linked_list_t *list = malloc(sizeof(doubly_linked_list_t));
 	DIE(!list, "Memory allocation failed!\n");
@@ -73,22 +77,19 @@ void delete_list(doubly_linked_list_t *list)
 
 void dll_pop_front(doubly_linked_list_t *list)
 {
-	if (list->head->nxt) {
+	if (list->head->nxt)
 		list->head->nxt->prv = NULL;
-	}
 	list->head = list->head->nxt;
 	list->size--;
 }
 
 dll_node_t *dll_lower_bound(doubly_linked_list_t *list, int address)
 {
-	if (!list->head || address < get_address(list->head->data)) {
+	if (!list->head || address < get_address(list->head->data))
 		return NULL;
-	}
 	dll_node_t *aux = list->head;
-	while (aux->nxt && address >= get_address(aux->nxt->data)) {
+	while (aux->nxt && address >= get_address(aux->nxt->data))
 		aux = aux->nxt;
-	}
 	return aux;
 }
 
@@ -96,33 +97,28 @@ void dll_insert(doubly_linked_list_t *list, dll_node_t *node)
 {
 	list->size++;
 	dll_node_t *aux = dll_lower_bound(list, get_address(node->data));
-	if (aux == NULL) {
+	if (!aux) {
 		node->nxt = list->head;
-		if (list->head) {
+		if (list->head)
 			list->head->prv = node;
-		}
 		node->prv = NULL;
 		list->head = node;
-	}
-	else {
+	} else {
 		node->nxt = aux->nxt;
 		node->prv = aux;
-		if (aux->nxt) {
+		if (aux->nxt)
 			aux->nxt->prv = node;
-		}
 		aux->nxt = node;
 	}
 }
 
-void dll_erase(doubly_linked_list_t *list, dll_node_t *node) {
-	if (list->head == node) {
+void dll_erase(doubly_linked_list_t *list, dll_node_t *node)
+{
+	if (list->head == node)
 		list->head = node->nxt;
-	}
-	if (node->prv) {
+	if (node->prv)
 		node->prv->nxt = node->nxt;
-	}
-	if (node->nxt) {
+	if (node->nxt)
 		node->nxt->prv = node->prv;
-	}
 	list->size--;
 }
