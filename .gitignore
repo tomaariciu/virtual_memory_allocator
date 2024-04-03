@@ -1,5 +1,6 @@
 .vscode
 check
+.check.grade
 check_utils/
 cs/
 *.sh

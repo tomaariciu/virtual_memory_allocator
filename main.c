@@ -10,12 +10,11 @@ int main(void)
 	general_info_t info;
 	initialise_info(&info);
 	dll_array_t segregated_free_lists;
-	doubly_linked_list_t allocated_blocks;
-	allocated_blocks.head = NULL;
-	allocated_blocks.size = 0;
+	doubly_linked_list_t *allocated_blocks = create_dll();
 	do {
 		scanf("%s", command);
-		end_program = parse_command(command, &info, &segregated_free_lists, &allocated_blocks);
+		//printf("Comanda este %s\n", command);
+		end_program = parse_command(command, &info, &segregated_free_lists, allocated_blocks);
 	} while (!end_program);
 	return 0;
 }

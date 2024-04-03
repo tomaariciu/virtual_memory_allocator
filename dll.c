@@ -1,13 +1,13 @@
 #include "dll.h"
 
-void *create_data(int id, int address, int size)
+void *create_data(int id, int address, int size, char *v)
 {
 	memory_data_t *data = malloc(sizeof(memory_data_t));
 	DIE(!data, "Memory allocation failed!\n");
 	data->id = id;
 	data->address = address;
 	data->size = size;
-	data->v = NULL;
+	data->v = v;
 	return (void *) data;
 }
 
@@ -43,6 +43,10 @@ dll_node_t *create_node(void *data)
 
 void delete_node(dll_node_t *node)
 {
+	char *v = get_array(node->data);
+	if (v) {
+		free(v);
+	}
 	free(node->data);
 	free(node);
 }
@@ -56,11 +60,36 @@ doubly_linked_list_t *create_dll()
 	return list;
 }
 
+void delete_list(doubly_linked_list_t *list)
+{
+	dll_node_t *curr_node = list->head;
+	for (int i = 0; i < list->size; i++) {
+		dll_node_t *nxt_node = curr_node->nxt;
+		delete_node(curr_node);
+		curr_node = nxt_node;
+	}
+	free(list);
+}
+
 void dll_pop_front(doubly_linked_list_t *list)
 {
-	list->head->nxt->prv = NULL;
+	if (list->head->nxt) {
+		list->head->nxt->prv = NULL;
+	}
 	list->head = list->head->nxt;
 	list->size--;
+}
+
+dll_node_t *dll_lower_bound(doubly_linked_list_t *list, int address)
+{
+	if (!list->head || address < get_address(list->head->data)) {
+		return NULL;
+	}
+	dll_node_t *aux = list->head;
+	while (aux->nxt && address >= get_address(aux->nxt->data)) {
+		aux = aux->nxt;
+	}
+	return aux;
 }
 
 void dll_insert(doubly_linked_list_t *list, dll_node_t *node)
@@ -85,14 +114,15 @@ void dll_insert(doubly_linked_list_t *list, dll_node_t *node)
 	}
 }
 
-dll_node_t *dll_lower_bound(doubly_linked_list_t *list, int address)
-{
-	if (!list->head || address < get_address(list->head->data)) {
-		return NULL;
+void dll_erase(doubly_linked_list_t *list, dll_node_t *node) {
+	if (list->head == node) {
+		list->head = node->nxt;
 	}
-	dll_node_t *aux = list->head;
-	while (aux->nxt && address > get_address(aux->nxt->data)) {
-		aux = aux->nxt;
+	if (node->prv) {
+		node->prv->nxt = node->nxt;
 	}
-	return aux;
+	if (node->nxt) {
+		node->nxt->prv = node->prv;
+	}
+	list->size--;
 }
