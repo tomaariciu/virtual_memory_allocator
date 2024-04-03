@@ -20,7 +20,6 @@ typedef struct general_info_t {
 	int free_blocks, allocated_blocks;
 	int malloc_calls, free_calls, fragmentations;
 	int reconstruction;
-	int max_size;
 } general_info_t;
 
 void initialise_info(general_info_t *info);

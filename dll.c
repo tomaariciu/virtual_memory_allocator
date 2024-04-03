@@ -48,9 +48,6 @@ dll_node_t *create_node(void *data)
 
 void delete_node(dll_node_t *node)
 {
-	char *v = get_array(node->data);
-	if (v)
-		free(v);
 	free(node->data);
 	free(node);
 }
@@ -69,6 +66,8 @@ void delete_list(doubly_linked_list_t *list)
 	dll_node_t *curr_node = list->head;
 	for (int i = 0; i < list->size; i++) {
 		dll_node_t *nxt_node = curr_node->nxt;
+		char *v = get_array(curr_node->data);
+		free(v);
 		delete_node(curr_node);
 		curr_node = nxt_node;
 	}

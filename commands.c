@@ -187,6 +187,22 @@ void malloc_command(general_info_t *info, dll_array_t *sfl,
 	printf("Out of memory\n");
 }
 
+dll_node_t *find_node(dll_array_t *sfl, int address)
+{
+	int best_address = 0;
+	dll_node_t *node = NULL;
+	for (int sz = 1; sz <= sfl->size; sz++) {
+		if (sfl->v[sz]->size == 0)
+			continue;
+		dll_node_t *aux = dll_lower_bound(sfl->v[sz], address);
+		if (aux && get_address(aux->data) > best_address) {
+			best_address = get_address(aux->data);
+			node = aux;
+		}
+	}
+	return node;
+}
+
 void free_command(general_info_t *info, dll_array_t *sfl,
 				  doubly_linked_list_t *alloc_list, int address)
 {
@@ -196,15 +212,48 @@ void free_command(general_info_t *info, dll_array_t *sfl,
 		return;
 	}
 	dll_erase(alloc_list, node);
+	char *v = get_array(node->data);
+	free(v);
 	int size = get_size(node->data);
+	info->allocated_memory -= size;
+	info->free_memory += size;
+	info->free_calls++;
+	info->allocated_blocks--;
 	if (info->reconstruction == 0) {
-		dll_insert(sfl->v[size], node);
-		info->allocated_memory -= size;
-		info->free_memory += size;
-		info->allocated_blocks--;
+		void *new_data = create_data(get_id(node->data), address, size, 0);
+		delete_node(node);
+		dll_node_t *new_node = create_node(new_data);
+		dll_insert(sfl->v[size], new_node);
+		info->free_blocks++;
+		return;
+	}
+	if (info->reconstruction == 1) {
+		int new_address = address, new_size = size, id = get_id(node->data);
+
+		dll_node_t *left_node = find_node(sfl, address);
+		if (left_node && get_end_addr(left_node->data) == address &&
+			get_id(left_node->data) == id) {
+			dll_erase(sfl->v[get_size(left_node->data)], left_node);
+			new_address = get_address(left_node->data);
+			new_size += get_size(left_node->data);
+			delete_node(left_node);
+			info->free_blocks--;
+		}
+
+		dll_node_t *right_node = find_node(sfl, address + size);
+		if (right_node && address + size == get_address(right_node->data) &&
+			get_id(right_node->data) == id) {
+			dll_erase(sfl->v[get_size(right_node->data)], right_node);
+			new_size += get_size(right_node->data);
+			delete_node(right_node);
+			info->free_blocks--;
+		}
+		void *new_data = create_data(id, new_address, new_size, 0);
+		delete_node(node);
+		dll_node_t *new_node = create_node(new_data);
+		dll_insert(sfl->v[new_size], new_node);
 		info->free_blocks++;
 	}
-	info->free_calls++;
 }
 
 int check_seg_fault(doubly_linked_list_t *alloc_list, int address, int no_bytes)

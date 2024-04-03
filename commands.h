@@ -15,7 +15,7 @@ void dump_memory(general_info_t *info, dll_array_t *sfl,
 				 doubly_linked_list_t *alloc_list);
 void malloc_command(general_info_t *info, dll_array_t *sfl,
 					doubly_linked_list_t *alloc_list, int no_bytes);
-dll_node_t *find_node(general_info_t *info, dll_array_t *sfl, int address);
+dll_node_t *find_node(dll_array_t *sfl, int address);
 void free_command(general_info_t *info, dll_array_t *sfl,
 				  doubly_linked_list_t *alloc_list, int address);
 int check_seg_fault(doubly_linked_list_t *alloc_list, int address,
